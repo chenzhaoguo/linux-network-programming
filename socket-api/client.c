@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <libgen.h>  // basename
 #include <netdb.h>   // gethostbyname
+
 #include <stdio.h>
 #include <stdlib.h>  // atoi
 #include <string.h>
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
 
     // 根据程序参数来生成socket的地址
     struct sockaddr_in addr;
-    bzero(&addr, sizeof(addr));
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(atoi(argv[2]));  // 端口号也需要转换为网络字节序
     // 根据hostname（点分十进制/域名）获取ip地址（网络字节序）
@@ -59,7 +60,7 @@ int main(int argc, char *argv[]) {
         char recv_buf[recv_buf_size];
         memset(recv_buf, '\0', recv_buf_size);
         ssize_t n_recv = recv(sock_fd, recv_buf, recv_buf_size, 0);
-        printf("Recv: [%d] %s\n", n_recv, recv_buf);
+        printf("Recv: [%ld] %s\n", n_recv, recv_buf);
     }
     free(buf);
     close(sock_fd);

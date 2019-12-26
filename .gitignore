@@ -2,11 +2,12 @@
 *.d
 
 # Compioled Directory
+cmake-build-*
 build
 
 # Editors & IDEs
 .vscode
-.clion
+.idea
 
 # Compiled Object files
 *.slo
