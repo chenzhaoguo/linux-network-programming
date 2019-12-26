@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 2.8)
+project(socket C CXX)
+file(GLOB srcs src/*.c src/*.cpp)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+foreach(src ${srcs})
+    get_filename_component(prog_name ${src} NAME_WE)
+    add_executable(${prog_name} ${src})
+endforeach()

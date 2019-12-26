@@ -1,6 +1,13 @@
 # Prerequisites
 *.d
 
+# Compioled Directory
+build
+
+# Editors & IDEs
+.vscode
+.clion
+
 # Compiled Object files
 *.slo
 *.lo
