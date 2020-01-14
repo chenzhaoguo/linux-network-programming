@@ -1,5 +1,30 @@
-# linux-network-programming
 
+linux-network-programming
+---
+<!-- TOC -->
+
+- [主机字节序与网络字节序](#主机字节序与网络字节序)
+- [Socket API](#socket-api)
+    - [Socket地址](#socket地址)
+    - [Socket地址的结构](#socket地址的结构)
+    - [点分址进制ip字符串与网络序的IP地址之间的转换](#点分址进制ip字符串与网络序的ip地址之间的转换)
+- [Socket基础API](#socket基础api)
+    - [socket: 创建Socket](#socket-创建socket)
+    - [bind: Socket绑定地址](#bind-socket绑定地址)
+    - [listen: 监听socket](#listen-监听socket)
+    - [accept: 接受连接](#accept-接受连接)
+    - [connect: 客户端建立连接](#connect-客户端建立连接)
+    - [close: 关闭socket](#close-关闭socket)
+    - [shutdown: 更加灵活的关闭socket](#shutdown-更加灵活的关闭socket)
+    - [recv/send: TCP数据读写](#recvsend-tcp数据读写)
+    - [recvfrom/sendto: UDP的数据读写](#recvfromsendto-udp的数据读写)
+    - [recvmsg/sendmsg: 通用数据读写函数](#recvmsgsendmsg-通用数据读写函数)
+- [带外标记 `todo`](#带外标记-todo)
+- [地址信息函数](#地址信息函数)
+- [socket选项`todo`](#socket选项todo)
+- [网络信息API](#网络信息api)
+
+<!-- /TOC -->
 
 ## 主机字节序与网络字节序
 
@@ -80,6 +105,7 @@ Linux Socket API提供了两组函数来提供这种转换功能，其中`inet_a
 ///系统成功，将返回一个文件描述系，它像其他文件描述符一样，是可读、可写、可控制、可关闭的。失败就返回-1，并设置errno。
 int socket(int domain, int type, int protocol);
 ```
+
 ### bind: Socket绑定地址
 
 当我们调用`socket()`函数创建了一个Socket后，虽然指定了地址族，但并未指定使用这个地址族中哪个具体的地址。
@@ -139,7 +165,7 @@ tcp        0      0 10.152.26.34:23333      172.20.25.122:53090     ESTABLISHED
 ```
 可以发生，实际能建立的连接数是`backlog+1`
 
-## accept: 接受连接
+### accept: 接受连接
 
 ```c
 #include <sys/types.h>
@@ -154,7 +180,8 @@ tcp        0      0 10.152.26.34:23333      172.20.25.122:53090     ESTABLISHED
 /// 调用失败，则返回-1，并且设置errno
 int accept(int sockfd, struct sockaddr* client_addr, socklen_t addrlen);
 ```
-## connect: 客户端建立连接
+
+### connect: 客户端建立连接
 
 ```c
 #include <sys/types.h>
@@ -170,7 +197,7 @@ int accept(int sockfd, struct sockaddr* client_addr, socklen_t addrlen);
 int connect(int sockfd, const struct sockaddr* serv_addr, socklen_t addrlen);
 ```
 
-## close: 关闭socket
+### close: 关闭socket
 
 ```c
 #include <unistd.h>
@@ -180,7 +207,7 @@ int connect(int sockfd, const struct sockaddr* serv_addr, socklen_t addrlen);
 int close(int fd);
 ```
 
-## shutdown: 更加灵活的关闭socket
+### shutdown: 更加灵活的关闭socket
 
 如果无论如何都要关闭连接（而不是将socket的引用计算减1），可以使用如下的`shutdown`系统调用，它是专门为网络编程设计的。
 
@@ -196,7 +223,7 @@ int close(int fd);
 int shutdown(int sockfd, int howto);
 ```
 
-## recv/send: TCP数据读写
+### recv/send: TCP数据读写
 
 
 ```c
@@ -277,7 +304,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 
 另外对于TCP连接，也可以调用`recvfrom/sendto`，只要把最后两个参数设置为`NULL`以忽略发送端/接收端的socket地址。
 
-## recvmsg/sendmsg: 通用数据读写函数
+### recvmsg/sendmsg: 通用数据读写函数
 
 socket编程接口还提供了一对通用的数据读写系统调用。它们不仅能用于TCP数据流，还能用于UDP数据报。最大的亮点，在于它们支持分散的内存块，可以分散读或者集中写。
 
