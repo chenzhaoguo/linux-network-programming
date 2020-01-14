@@ -1,12 +1,12 @@
 #include <arpa/inet.h>
 #include <errno.h>
+#include <libgen.h>  // basename
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>  // atoi
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <libgen.h> // basename
-#include <stdlib.h> // atoi
 
 static int stop = 0;
 

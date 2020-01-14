@@ -1,17 +1,17 @@
-#include <netinet/in.h> //sockaddr_in
-#include <netdb.h>
-#include <stdlib.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <string.h>
+#include <netdb.h>
+#include <netinet/in.h>  //sockaddr_in
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // 打印域名别名
 static void print_alias_names(char **alias_names) {
   printf("alias names: [");
   int first_name = 1;
   for (char **alias_name = alias_names; *alias_name != NULL; alias_name++) {
-    printf("%s%s", (first_name == 1 ?"":", "),  *alias_name);
+    printf("%s%s", (first_name == 1 ? "" : ", "), *alias_name);
     first_name = 0;
   }
   printf("]\n");
@@ -25,14 +25,16 @@ static void print_ip_address(char **ip_address, int addr_len) {
     // 打印ipv4地址的点分十进制
     char ip_string[INET_ADDRSTRLEN];
     for (char **ip = ip_address; *ip != NULL; ip++) {
-      printf("%s%s", (first_name == 1 ?"":", "),  inet_ntop(AF_INET, *ip, ip_string, INET_ADDRSTRLEN));
+      printf("%s%s", (first_name == 1 ? "" : ", "),
+             inet_ntop(AF_INET, *ip, ip_string, INET_ADDRSTRLEN));
       first_name = 0;
     }
   } else if (addr_len == sizeof(struct in6_addr)) {
     // 打印ipv6地址的十六进制字符串形式
     char ip_string[INET6_ADDRSTRLEN];
     for (char **ip = ip_address; *ip != NULL; ip++) {
-      printf("%s%s", (first_name == 1 ?"":", "),  inet_ntop(AF_INET6, *ip, ip_string, INET6_ADDRSTRLEN));
+      printf("%s%s", (first_name == 1 ? "" : ", "),
+             inet_ntop(AF_INET6, *ip, ip_string, INET6_ADDRSTRLEN));
       first_name = 0;
     }
   } else {
@@ -46,7 +48,7 @@ static void print_servent(const struct servent *serv_info) {
   printf("alias names: [");
   int first_name = 1;
   for (char **alias_name = serv_info->s_aliases; *alias_name != NULL; alias_name++) {
-    printf("%s%s", (first_name == 1 ?"":", "),  *alias_name);
+    printf("%s%s", (first_name == 1 ? "" : ", "), *alias_name);
     first_name = 0;
   }
   printf("]\n");
@@ -60,7 +62,7 @@ int main(int argc, char *argv[]) {
   if (ret != 0) {
     printf("%s\n", strerror(errno));
   }
-  struct hostent* host_info =  gethostbyaddr(&ipv4_address, sizeof(struct in_addr), AF_INET);
+  struct hostent *host_info = gethostbyaddr(&ipv4_address, sizeof(struct in_addr), AF_INET);
   printf("hostname: %s\n", host_info->h_name);
   print_alias_names(host_info->h_aliases);
   print_ip_address(host_info->h_addr_list, host_info->h_length);
@@ -76,7 +78,8 @@ int main(int argc, char *argv[]) {
   // Output:
   // hostname: z163ipv6.v.bsgslb.cn
   // alias names: [www.163.com, www.163.com.163jiasu.com, www.163.com.bsgslb.cn]
-  // ip address: [183.47.233.10, 183.47.233.9, 183.47.233.13, 183.47.233.6, 183.47.233.12, 183.47.233.7, 183.47.233.14, 183.47.233.8, 183.47.233.11]
+  // ip address: [183.47.233.10, 183.47.233.9, 183.47.233.13, 183.47.233.6, 183.47.233.12,
+  // 183.47.233.7, 183.47.233.14, 183.47.233.8, 183.47.233.11]
 
   struct servent *serv_info = getservbyname("https", "tcp");
   if (serv_info != NULL) {

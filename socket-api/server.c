@@ -68,10 +68,9 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     char client_ip[INET_ADDRSTRLEN];
-    printf(
-        "Connection from %s:%d\n",
-        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN),
-        ntohs(client_addr.sin_port));
+    printf("Connection from %s:%d\n",
+           inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN),
+           ntohs(client_addr.sin_port));
     HandleClientConnection(conn);
     printf("Connection closed!\n");
     close(conn);
