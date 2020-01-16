@@ -29,6 +29,9 @@ linux-network-programming
     - [dup/dup2: 复制文件到新的描述符](#dupdup2-复制文件到新的描述符)
     - [readv/writev: 读写分散的数据块](#readvwritev-读写分散的数据块)
     - [sendfile: 零拷贝发送传输文件](#sendfile-零拷贝发送传输文件)
+    - [mmap/munmap `todo`](#mmapmunmap-todo)
+    - [splice: 在两个文件之间移动数据](#splice-在两个文件之间移动数据)
+    - [tee: 管道文件描述符之间复制数据](#tee-管道文件描述符之间复制数据)
 
 <!-- /TOC -->
 
@@ -533,3 +536,49 @@ ssize_t sendfile(int out_fd, int in_fd, off_t* offset, ssize_t count);
 ```
 
 >Tips: `in_fd`必须是一个支持类似`mmap`函数的文件描述符，即它必须指向真实的文件，而不能是`socket`和管道；而`out_fd`则必须是一个`socket`。由此可见`sendfile`几乎是专门为网络上传输文件而设计的。
+
+### mmap/munmap `todo`
+
+在CSAPP的内存管理的部分详细介绍
+
+### splice: 在两个文件之间移动数据
+
+
+![](./assets/mv_data_with_splice.png)
+
+```c
+// 关于_GNU_SOURCE的说明：https://stackoverflow.com/a/5583764
+#define _GNU_SOURCE 
+#include <fcntl.h>
+/// @brief splice用于在两个文件描述符之间移动数据，也是零拷贝操作
+/// @param[in] fd_in 待输入数据的文件描述符，如果fd_in是一个管道描述符，那么off_in必须为NULL
+/// @param[in] off_in 表示输入数据流的何处开始读取数据，**相对于文件读取位置的偏移**
+/// 如果设置为NULL，表示从当前偏移位置读入
+/// @param[in] fd_out 待输出数据的文件描述符
+/// @param[in] off_out 表示从输出数据流的何处开始写入数据，意义同off_in
+/// @param[in] len 要移动的数据的大小
+/// @param[in] flags 控制如何移动
+/// @return 调用成功时返回移动字节的数据，它可能是0(从空管道中读取数据)，调用失败，则返回-1并设置errno
+ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t len, unsigned int flags);
+```
+
+使用`splice`时`fd_in`和`fd_out`必须有一个为管道文件描述符。
+
+使用`splice`进行文件拷贝的示例程序：[copyfile_splice.c](./socket-api/copyfile_splice.c)
+
+### tee: 管道文件描述符之间复制数据
+
+```c
+#include <fcntl.h>
+/// @brief tee用于在两个管道文件描述符之间复制数据
+/// 它并不会消耗掉数据，只是拷贝，它也是零拷贝的
+/// @param[in] pipefd_in  待输入数据的管道文件描述符
+/// @param[in] pipefd_out 待输出数据的管道文件描述符
+ssize_t tee(int pipefd_in, int pipefd_out, size_t len, unsigned int flags);
+/// @param[in] len 拷贝数据的长度
+/// @param[in] flags控制拷贝数据的行为，同splice
+```
+
+![](./assets/stdin2_stdout_and_file.png)
+
+示例代码：[stdin2_stdout_and_file.c](./socket-api/stdin2_stdout_and_file.c)
