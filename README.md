@@ -23,6 +23,12 @@ linux-network-programming
 - [地址信息函数](#地址信息函数)
 - [socket选项`todo`](#socket选项todo)
 - [网络信息API](#网络信息api)
+- [高级IO函数](#高级io函数)
+    - [pipe: 用于创建一个进程间通信的管道](#pipe-用于创建一个进程间通信的管道)
+    - [Linux内核是如何打开文件的](#linux内核是如何打开文件的)
+    - [dup/dup2: 复制文件到新的描述符](#dupdup2-复制文件到新的描述符)
+    - [readv/writev: 读写分散的数据块](#readvwritev-读写分散的数据块)
+    - [sendfile: 零拷贝发送传输文件](#sendfile-零拷贝发送传输文件)
 
 <!-- /TOC -->
 
@@ -412,3 +418,118 @@ int getnameinfo(const struct sockaddr *sockaddr, socklen_t addrlen, char *host, 
 其中`ai_flags`可以设置多种标志组合，来控制上面两个函数的行为。
 
 
+## 高级IO函数
+
+Linux提供了很多高级的I/O函数，它们并不像Linux基础I/O函数(比如open/read)那么常用，但在特定的条件下却表现出优秀的性能。大概可以分为下面三类：
+- 用于创建文件描述符的函数，包括`pipe`和`dup/dup2`函数。
+- 用于读写数据的函数，包括`readv/writev`、`sendfile`、`mmap/munmap`、`splice`和`tee`函数。
+- 用于控制I/O行为和属性的函数，包括`fcntl`函数。
+
+### pipe: 用于创建一个进程间通信的管道
+
+```c
+/// @brief 创建一个单向通信的管道，fd[0]和fd[1]构成了管道的两端
+/// fd[0]用于读取数据，fd[1]用于发送数据，不能反向使用
+/// 如果要实现双向数据传输，就必须创建两个通道
+/// @param[in&out] fd 包含两个整数的数组指针，存放一对打开的文件描述符
+/// @return 成功时返回0，失败时返回-1并设置errno
+#include <unistd.h>
+int pipe(int fd[2]);
+```
+
+默认创建的管道是阻塞式的，当没有数据从`fd[1]`写入时，如果从`fd[0]`中读取数据就会阻塞。而如果数据一直不从`fd[0]`读取，而一直往`fd[1]`写入时，会导致管道被塞满，这里对`fd[1]`的写入就会被阻塞。自Linux 2.6.11内核起，管道容量的大小默认是65536字节。
+
+如果管道的写入端`fd[1]`关闭（引用计数降为0）后，再从`fd[0]`读取数据，则`read`操作将返回0，即读取到了文件结束标记（End Of File `EOF`）；反之，如果官道的读取端`fd[0]`关闭后，再对`fd[1]`执行`write`调用，则会返回失败，并引发`SIGPIPE`信号。
+
+Linux的socket　API中提供了一个`socketpair`函数。它能够方便地创建双向管道。其定义如下：
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+/// @brief 创建一个双向管道
+/// @param[in] domain 如socket创建参数，但这里只使用UNIX本地协议族AF_UNIX
+/// @param[in] type 如socket创建参数
+/// @param[in] protocol 如socket创建参数
+/// @param[in] fd 管道两端的文件描述符，与pipe不同的这两个文件描述符同时支持读和写
+int socketpair(int domian, int type, int protocol, int fd[2]);
+```
+
+`pipe`的示例程序：[test_pipe.c](./socket-api/test_pipe.c)
+
+### Linux内核是如何打开文件的
+
+内核用三个相关的数据结构来表示打开的文件：
+- 描述符表（descriptor table）:每个进程都有它独立的描述符表，每个打开的文件用它的文件描述符在表中的索引，每个表项的内容是一个指向文件表的指针。
+- 文件表(file table)。整个内核打开文件的集合是由一张文件表来表示的，所有进程共享这张表。它的每个表项包含了当前文件位置、引用计数，以及一个指向`v-node`表中对应表项的指针等。关闭一个描述符会减少相应的文件表项中引用计数。内核不会删除这个文件表表项，直到它的引用计数为零。
+- `v-node`表。同文件表一样，所有进程共享这张`v-node`表。每个表项包含`stat`结构中的大多数信息，比如`st_mode`和`st_size`等。
+
+我们先来看一下正常情况下，没有文件共享时，如下图：描述符1和4通过不同的打开文件表表项来引用两个不同的文件。
+
+![](./assets/file_descriptor_01.png)
+
+下面这符图描述的是：多个描述符通过了不同的文件表表项来引用同一个文件。这种情况也很常用，比如我们在一个进程中对一个文件打开两次，获得两个描述符，通过这两个描述符，我们可以对文件不同的位置进行操作。
+
+![](./assets/file_descriptor_02.png)
+
+然后我们再看一下父子进程是如何共享文件的。假设在`fork`之前，进程中打开文件的情况如第一幅图。当调用`fork`后，子进程完全复制了父进程`PCB`中的内容，因此父子进程打开了同样的文件，共享了相同的文件位置。但是引用计数加1了。
+
+![](./assets/file_descriptor_03.png)
+
+
+### dup/dup2: 复制文件到新的描述符
+
+```c
+#include <unistd.h>
+/// @brief dup创建一个新的文件描述符，该新的文件描述符和原有的文件描述符oldfd
+/// 指向相同的文件、管道或者网络连接。并且dup返回的文件描述符总是取系统当前可用的最小的整数值
+/// @return 调用成功，则返回正确的文件描述符值，调用失败，则返回-1并设置errno
+int dup(int oldfd);
+
+/// @brief dup2函数复制描述符表表项oldfd到描述符表项newfd，覆盖描述符表表项new-fd以前的内容。
+/// 如果newfd已经打开了，dup2会复制oldfd之前关闭newfd。
+/// @return 调用成功，则返回正确的文件描述符值，调用失败，则返回-1并设置errno
+int dup2(int oldfd, int newfd);
+```
+
+用下图来示例的话，假设调用`dup2(4,2)`前，我们的状态是上面的第一张图所示。其中描述符1(标准输出)对应文件A（比如一个终端），描述符4对应于文件B(比如一个磁盘文件)。A和B的引用计数等于1，当调用了`dup2(4,2)`后。两个描述符现在定位到的同样的文件表表项。而且文件B的引用计数增加。文件A将会被关闭，它的文件表和`v-node`表表项都会被删除。
+
+![](./assets/file_descriptor_04.png)
+
+> Tips: 通过`dup`和`dup2`创建的文件描述符并不继承原文件描述符的属性，比如`close-on-exec`和`non-blocking`等。
+
+`dup`示例程序：[test_dup.c](./socket-api/test_dup.c)
+
+### readv/writev: 读写分散的数据块
+
+```c
+#include <sys/uio.h>
+/// @brief 将数据从文件描述符读到分散的内在块中
+/// @param[in] fd 进行读取的文件描述符
+/// @param[in] vector 类型为iovec的分散内存
+/// @param[in] count 分散内存的块数
+/// @return 调用成功时，返回读取到的字节数，失败时返回-1并设置errno
+ssize_t readv(int fd, const struct iovec* vector, int count);
+
+/// @brief 将分散在不同内在块中的数据集中写到文件描述符中
+/// @param[in] fd 进行写入的文件描述符
+/// @param[in] vector 类型为iovec的分散内存
+/// @param[in] count 分散内存的块数
+/// @return 调用成功时，返回写入的字节数，失败时返回-1并设置errno
+ssize_t writev(int fd, const struct iovec* vector, int count);
+```
+
+### sendfile: 零拷贝发送传输文件
+
+```c
+#include <sys/sendfile.h>
+/// @brief 在两个文件描述符之间直接传递数据（完全在内核中操作），
+/// 从而避免了内核缓冲区和用户缓冲区之间的数据拷贝
+/// @param[in] out_fd 待写入内容的文件描述符
+/// @param[in] in_fd 待读出内容的文件描述符
+/// @param[in] offset 指定了从in_fd中哪个位置开始读
+/// @param[in] count 指定了in_fd和out_fd之间传输的字节数
+/// @return 成功时，返回实际传输的字节数，失败时返回-1并设置errno
+ssize_t sendfile(int out_fd, int in_fd, off_t* offset, ssize_t count);
+```
+
+>Tips: `in_fd`必须是一个支持类似`mmap`函数的文件描述符，即它必须指向真实的文件，而不能是`socket`和管道；而`out_fd`则必须是一个`socket`。由此可见`sendfile`几乎是专门为网络上传输文件而设计的。
