@@ -9,33 +9,41 @@ linux-network-programming
     - [Socket地址的结构](#socket地址的结构)
     - [点分址进制ip字符串与网络序的IP地址之间的转换](#点分址进制ip字符串与网络序的ip地址之间的转换)
 - [Socket基础API](#socket基础api)
-    - [socket: 创建Socket](#socket-创建socket)
-    - [bind: Socket绑定地址](#bind-socket绑定地址)
-    - [listen: 监听socket](#listen-监听socket)
-    - [accept: 接受连接](#accept-接受连接)
-    - [connect: 客户端建立连接](#connect-客户端建立连接)
-    - [close: 关闭socket](#close-关闭socket)
-    - [shutdown: 更加灵活的关闭socket](#shutdown-更加灵活的关闭socket)
-    - [recv/send: TCP数据读写](#recvsend-tcp数据读写)
-    - [recvfrom/sendto: UDP的数据读写](#recvfromsendto-udp的数据读写)
-    - [recvmsg/sendmsg: 通用数据读写函数](#recvmsgsendmsg-通用数据读写函数)
+    - [`socket`: 创建Socket](#socket-创建socket)
+    - [`bind`: Socket绑定地址](#bind-socket绑定地址)
+    - [`listen`: 监听socket](#listen-监听socket)
+    - [`accept`: 接受连接](#accept-接受连接)
+    - [`connect`: 客户端建立连接](#connect-客户端建立连接)
+    - [`close`: 关闭socket](#close-关闭socket)
+    - [`shutdown`: 更加灵活的关闭socket](#shutdown-更加灵活的关闭socket)
+    - [`recv`/`send`: TCP数据读写](#recvsend-tcp数据读写)
+    - [`recvfrom`/`sendto`: UDP的数据读写](#recvfromsendto-udp的数据读写)
+    - [`recvmsg`/`sendmsg`: 通用数据读写函数](#recvmsgsendmsg-通用数据读写函数)
 - [带外标记 `todo`](#带外标记-todo)
 - [地址信息函数](#地址信息函数)
 - [socket选项`todo`](#socket选项todo)
 - [网络信息API](#网络信息api)
 - [高级IO函数](#高级io函数)
-    - [pipe: 用于创建一个进程间通信的管道](#pipe-用于创建一个进程间通信的管道)
+    - [`pipe`: 用于创建一个进程间通信的管道](#pipe-用于创建一个进程间通信的管道)
     - [Linux内核是如何打开文件的](#linux内核是如何打开文件的)
-    - [dup/dup2: 复制文件到新的描述符](#dupdup2-复制文件到新的描述符)
-    - [readv/writev: 读写分散的数据块](#readvwritev-读写分散的数据块)
-    - [sendfile: 零拷贝发送传输文件](#sendfile-零拷贝发送传输文件)
-    - [mmap/munmap `todo`](#mmapmunmap-todo)
-    - [splice: 在两个文件之间移动数据](#splice-在两个文件之间移动数据)
-    - [tee: 管道文件描述符之间复制数据](#tee-管道文件描述符之间复制数据)
+    - [`dup`/`dup2`: 复制文件到新的描述符](#dupdup2-复制文件到新的描述符)
+    - [`readv`/`writev`: 读写分散的数据块](#readvwritev-读写分散的数据块)
+    - [`sendfile`: 零拷贝发送传输文件](#sendfile-零拷贝发送传输文件)
+    - [`mmap`/`munmap` `todo`](#mmapmunmap-todo)
+    - [`splice`: 在两个文件之间移动数据](#splice-在两个文件之间移动数据)
+    - [`tee`: 管道文件描述符之间复制数据](#tee-管道文件描述符之间复制数据)
+    - [`fcntl`: 控制文件描述符的属性与行为](#fcntl-控制文件描述符的属性与行为)
+- [Linux服务器程序规范](#linux服务器程序规范)
+    - [Linux系统日志](#linux系统日志)
+    - [程序的用户身份](#程序的用户身份)
+    - [进程间的关系](#进程间的关系)
+    - [系统资源限制](#系统资源限制)
+    - [改变工作目录与根目录](#改变工作目录与根目录)
+    - [服务器程序后台化](#服务器程序后台化)
 
 <!-- /TOC -->
 
-## 主机字节序与网络字节序
+## .1. 主机字节序与网络字节序
 
 对于跨越多个字节的程序对象，我们必须建立两个规则：这个对象的地址是什么？以及在内存中如何排列这些字节。在几乎所有的机器上，多字节对象都被存储为连续的字节序列，对象的地址为所使用的字节中最小的地址。
 
@@ -52,7 +60,7 @@ linux-network-programming
 
 主机大小端判断以及主机与网络序转换的示例程序：[socket-api/big_little_endian.c](socket-api/big_little_endian.c)
 
-## Socket API
+## .2. Socket API
 
 Linux的网络API可以分类3类：
 
@@ -60,9 +68,9 @@ Linux的网络API可以分类3类：
 - socket基础API，包括了socket创建、关闭、命名、监听、接受连接、发起连接、发送与接收数据以及读取和设置socket的选项。
 - 网络信息API，它提供了ip地址和域名、端口号和服务名之间的转换
 
-### Socket地址
+### .2.1. Socket地址
 
-### Socket地址的结构
+### .2.2. Socket地址的结构
 
 目前常见的协议族的定义如下：
 
@@ -80,7 +88,7 @@ Linux的网络API可以分类3类：
 
 由于我们在socket API中只能使用`sockaddr`的结构，所以所有专用的地址结构，必须通过强制类型转换来转换为通用类型。
 
-### 点分址进制ip字符串与网络序的IP地址之间的转换
+### .2.3. 点分址进制ip字符串与网络序的IP地址之间的转换
 
 对于ip来地，人们习惯用点分十进制来表示IPv4的地址，用十六进制字符串来表示IPv6的地址，但是在编程里，我们需要转化为整数（二进制数），
 当我们需要写日志的时候，我们又需要以可读的形式来记录。
@@ -91,9 +99,9 @@ Linux Socket API提供了两组函数来提供这种转换功能，其中`inet_a
 
 示例程序：[socket-api/ip_translation.c](socket-api/ip_translation.c)
 
-## Socket基础API
+## .3. Socket基础API
 
-### socket: 创建Socket
+### .3.1. `socket`: 创建Socket
 
 ```c
 #include <sys/types.h>
@@ -115,7 +123,7 @@ Linux Socket API提供了两组函数来提供这种转换功能，其中`inet_a
 int socket(int domain, int type, int protocol);
 ```
 
-### bind: Socket绑定地址
+### .3.2. `bind`: Socket绑定地址
 
 当我们调用`socket()`函数创建了一个Socket后，虽然指定了地址族，但并未指定使用这个地址族中哪个具体的地址。
 
@@ -137,7 +145,7 @@ int socket(int domain, int type, int protocol);
 int bind(int sockfd, const struct sockaddr* my_addr, socklen_t addrlen);
 ```
 
-### listen: 监听socket
+### .3.3. `listen`: 监听socket
 
 ```c
 /// @brief 给socket创建一个监听队列以存放待处理的客户连接
@@ -174,7 +182,7 @@ tcp        0      0 10.152.26.34:23333      172.20.25.122:53090     ESTABLISHED
 ```
 可以发生，实际能建立的连接数是`backlog+1`
 
-### accept: 接受连接
+### .3.4. `accept`: 接受连接
 
 ```c
 #include <sys/types.h>
@@ -190,7 +198,7 @@ tcp        0      0 10.152.26.34:23333      172.20.25.122:53090     ESTABLISHED
 int accept(int sockfd, struct sockaddr* client_addr, socklen_t addrlen);
 ```
 
-### connect: 客户端建立连接
+### .3.5. `connect`: 客户端建立连接
 
 ```c
 #include <sys/types.h>
@@ -206,7 +214,7 @@ int accept(int sockfd, struct sockaddr* client_addr, socklen_t addrlen);
 int connect(int sockfd, const struct sockaddr* serv_addr, socklen_t addrlen);
 ```
 
-### close: 关闭socket
+### .3.6. `close`: 关闭socket
 
 ```c
 #include <unistd.h>
@@ -216,7 +224,7 @@ int connect(int sockfd, const struct sockaddr* serv_addr, socklen_t addrlen);
 int close(int fd);
 ```
 
-### shutdown: 更加灵活的关闭socket
+### .3.7. `shutdown`: 更加灵活的关闭socket
 
 如果无论如何都要关闭连接（而不是将socket的引用计算减1），可以使用如下的`shutdown`系统调用，它是专门为网络编程设计的。
 
@@ -232,7 +240,7 @@ int close(int fd);
 int shutdown(int sockfd, int howto);
 ```
 
-### recv/send: TCP数据读写
+### .3.8. `recv`/`send`: TCP数据读写
 
 
 ```c
@@ -296,7 +304,7 @@ recv和send操作的数据交换实际是**用户空间中的buf里的数据**�
 
 > Tips: flags参数只对send和recv的当前调用生效，要永久性的修改socket的某些属性，需要使用`setsockopt`。
 
-### recvfrom/sendto: UDP的数据读写
+### .3.9. `recvfrom`/`sendto`: UDP的数据读写
 
 ```c
 #include <sys/types.h>
@@ -313,7 +321,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 
 另外对于TCP连接，也可以调用`recvfrom/sendto`，只要把最后两个参数设置为`NULL`以忽略发送端/接收端的socket地址。
 
-### recvmsg/sendmsg: 通用数据读写函数
+### .3.10. `recvmsg`/`sendmsg`: 通用数据读写函数
 
 socket编程接口还提供了一对通用的数据读写系统调用。它们不仅能用于TCP数据流，还能用于UDP数据报。最大的亮点，在于它们支持分散的内存块，可以分散读或者集中写。
 
@@ -337,11 +345,11 @@ ssize_t sendmsg(int sockfd, struct msghdr* msg, int flags);
 ```
 其中的`msg_control`和`msg_controllen`成员用于辅助数据的传送，==这里先不讨论，留个坑==。
 
-## 带外标记 `todo`
+## .4. 带外标记 `todo`
 
 我们可以通过设置`recv`的flags参数中的`MSG_OOB`标志来接收带外数据。实际应用中，我们通常无法预期带外数据何时来，所以不知道什么时候需要设置这个标志。Linux内核检测到TCP紧急标志时，将在I/O复用产生异常事件和SIGURG信号。
 
-## 地址信息函数
+## .5. 地址信息函数
 
 通过下面的2个函数，我们可以通过一个`连接Socket`来获取通信双方各自的socket地址。
 
@@ -355,9 +363,9 @@ int getpeername(int sockfd, struct sockaddr *address, socklen_t* address_len);
 
 如果实际socket地址的长度大于address所批内存的大小，那么该socket地址将被截断。
 
-## socket选项`todo`
+## .6. socket选项`todo`
 
-## 网络信息API
+## .7. 网络信息API
 
 ```c
 #include <netdb.h>
@@ -421,14 +429,14 @@ int getnameinfo(const struct sockaddr *sockaddr, socklen_t addrlen, char *host, 
 其中`ai_flags`可以设置多种标志组合，来控制上面两个函数的行为。
 
 
-## 高级IO函数
+## .8. 高级IO函数
 
 Linux提供了很多高级的I/O函数，它们并不像Linux基础I/O函数(比如open/read)那么常用，但在特定的条件下却表现出优秀的性能。大概可以分为下面三类：
 - 用于创建文件描述符的函数，包括`pipe`和`dup/dup2`函数。
 - 用于读写数据的函数，包括`readv/writev`、`sendfile`、`mmap/munmap`、`splice`和`tee`函数。
 - 用于控制I/O行为和属性的函数，包括`fcntl`函数。
 
-### pipe: 用于创建一个进程间通信的管道
+### .8.1. `pipe`: 用于创建一个进程间通信的管道
 
 ```c
 /// @brief 创建一个单向通信的管道，fd[0]和fd[1]构成了管道的两端
@@ -459,7 +467,7 @@ int socketpair(int domian, int type, int protocol, int fd[2]);
 
 `pipe`的示例程序：[test_pipe.c](./socket-api/test_pipe.c)
 
-### Linux内核是如何打开文件的
+### .8.2. Linux内核是如何打开文件的
 
 内核用三个相关的数据结构来表示打开的文件：
 - 描述符表（descriptor table）:每个进程都有它独立的描述符表，每个打开的文件用它的文件描述符在表中的索引，每个表项的内容是一个指向文件表的指针。
@@ -479,7 +487,7 @@ int socketpair(int domian, int type, int protocol, int fd[2]);
 ![](./assets/file_descriptor_03.png)
 
 
-### dup/dup2: 复制文件到新的描述符
+### .8.3. `dup`/`dup2`: 复制文件到新的描述符
 
 ```c
 #include <unistd.h>
@@ -502,9 +510,9 @@ int dup2(int oldfd, int newfd);
 
 `dup`示例程序：[test_dup.c](./socket-api/test_dup.c)
 
-### readv/writev: 读写分散的数据块
+### .8.4. `readv`/`writev`: 读写分散的数据块
 
-```c
+```cpp
 #include <sys/uio.h>
 /// @brief 将数据从文件描述符读到分散的内在块中
 /// @param[in] fd 进行读取的文件描述符
@@ -521,9 +529,9 @@ ssize_t readv(int fd, const struct iovec* vector, int count);
 ssize_t writev(int fd, const struct iovec* vector, int count);
 ```
 
-### sendfile: 零拷贝发送传输文件
+### .8.5. `sendfile`: 零拷贝发送传输文件
 
-```c
+```cpp
 #include <sys/sendfile.h>
 /// @brief 在两个文件描述符之间直接传递数据（完全在内核中操作），
 /// 从而避免了内核缓冲区和用户缓冲区之间的数据拷贝
@@ -537,16 +545,16 @@ ssize_t sendfile(int out_fd, int in_fd, off_t* offset, ssize_t count);
 
 >Tips: `in_fd`必须是一个支持类似`mmap`函数的文件描述符，即它必须指向真实的文件，而不能是`socket`和管道；而`out_fd`则必须是一个`socket`。由此可见`sendfile`几乎是专门为网络上传输文件而设计的。
 
-### mmap/munmap `todo`
+### .8.6. `mmap`/`munmap` `todo`
 
 在CSAPP的内存管理的部分详细介绍
 
-### splice: 在两个文件之间移动数据
+### .8.7. `splice`: 在两个文件之间移动数据
 
 
 ![](./assets/mv_data_with_splice.png)
 
-```c
+```cpp
 // 关于_GNU_SOURCE的说明：https://stackoverflow.com/a/5583764
 #define _GNU_SOURCE 
 #include <fcntl.h>
@@ -566,9 +574,9 @@ ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t le
 
 使用`splice`进行文件拷贝的示例程序：[copyfile_splice.c](./socket-api/copyfile_splice.c)
 
-### tee: 管道文件描述符之间复制数据
+### .8.8. `tee`: 管道文件描述符之间复制数据
 
-```c
+```cpp
 #include <fcntl.h>
 /// @brief tee用于在两个管道文件描述符之间复制数据
 /// 它并不会消耗掉数据，只是拷贝，它也是零拷贝的
@@ -582,3 +590,280 @@ ssize_t tee(int pipefd_in, int pipefd_out, size_t len, unsigned int flags);
 ![](./assets/stdin2_stdout_and_file.png)
 
 示例代码：[stdin2_stdout_and_file.c](./socket-api/stdin2_stdout_and_file.c)
+
+### .8.9. `fcntl`: 控制文件描述符的属性与行为
+
+`todo`
+
+## .9. Linux服务器程序规范
+
+- Linux服务器程序一般以后台进程形式运行。后台进程以称守护进程（daemon）。它没有控制终端，因为不会意外收到用户的输入。守护进程的父进程通常是init进程（PID为1的进程）。
+- Linux服务器程序通常有一套日志系统，它至少能输出日志到文件，有的高级服务器还能输出日志到专门的UDP服务器。大部分的后台进程都在`/var/log`目录下有拥有自己的日志目录。
+- Linux服务器程序一般以某个专门的非root身份运行。比如`mysqld`、`httpd`、`syslogd`等后台程序，分别拥有自己的运行账号`mysql`、`apache`和`syslog`。
+- Linux服务器程序通常是可配置的。服务器程序通常能处理很多命令行选项，如果一次运行的选项太多，则可以用配置文件来管理。绝大多数的服务器程序都有配置文件，并存放在`/etc/`目录下。
+- Linux服务器进程通常会在启动的时候生成一个PID文件并存放`/var/run`目录中，以记录该后台进程的`PID`。比如`syslog`的`PID`文件是`/var/run/syslogd.pid`。
+- Linux服务器程序通常要考虑系统资源和限制，以预测自身能承受多大的负荷，比如进程可用文件描述符的总数与内存总量。
+
+
+### .9.1. Linux系统日志
+
+现在的Linux系统上使用了`rsyslogd`守护进程来处理系统日志，它既能接收用户进程输出的日志，又能接收内核日志。用户可以通过`syslog`函数生成系统日志，该函数将日志输出到一个UNIX本地域socket类型(`AF_UNIX`)的文件`/dev/log`中，`rsyslogd`则监听该文件以获取用户进程的输出。内核日志由`printk`等函数打印至内核的环状缓冲(`ring buffer`)中。环状缓存的内容直接映射到`/proc/kmsg`文件中。`rsyslogd`则通过读取该文件获取内核日志。
+
+![Linux syslog](./assets/linux_syslog.png)
+
+`syslogd`守护进程在接收到用户或内核输出的日志后，会把它们输出至某些特定的日志文件。
+
+默认情况下，调试信息则保存至`var/log/debug`文件，普通信息保存至`var/log/messages`文件，内核消息则保存至`var/log/kern.log`文件。
+
+不过，日志信息具体如何分发，可以在`rsyslogd`的配置文件中设置。`rsyslogd`的主配置文件是`/etc/rsyslog.conf`。
+
+```cpp
+#include <syslog.h>
+
+// 系统日志的priority
+#define LOG_EMERG       0 // 系统不可用
+#define LOG_ALERT       1 // 报警，需要立即采取动作
+#define LOG_CRIT        2 // 非常严重的情况
+#define LOG_ERR         3 // 错误
+#define LOG_WARNING     4 // 警告
+#define LOG_NOTICE      5 // 通知
+#define LOG_INFO        6 // 信息
+#define LOG_DEBUG       7 // 调试
+
+/// @brief 输出系统日志
+/// @param[in] priority 用于设置日志级别，从DEBUG到EMERG等
+/// @param[in] fmt 格式化日志输出
+void syslog(int priority, const char *fmt, ...);
+
+// logopt的可配选项
+#define LOG_PID     0x01 // 在日志消息中包含程序PID
+#define LOG_CONS    0x02 // 如果消息不能记录到日志，则打印至终端
+#define LOG_ODELAY  0x04 // 延迟打开日志功能直到第一次调用syslog
+#define LOG_NDELAY  0x08 // 不延迟打开日志功能
+
+/// @brief 改变syslog的默认输出方式，进一步结构化日志内容
+/// openlog是可选的，如果没调用，则syslog会自动的调用，创建unix本地socket
+/// @param[in] ident参数指定的字符串将被添加到日志消息的日期和时间之后，它通常设置为程序的名字。
+/// @param[in] logopt参数对后续syslog调用行为进行配置
+/// @param[in] facility参数用于修改syslog函数中的默认设施值
+void openlog(const char* ident, int logopt, int facility);
+
+/// @brief 设置日志的过滤位
+/// @param[in] maskpri用于指定哪些级别的日志被输出
+/// 一般需要和LOG_MASK和LOG_UPTO两个宏结合来使用
+/// LOG_MASK(pri) 则只输出pri级别的日志
+/// LOG_UPTO(pri) 则只输出比pri小于或等于级别的日志
+/// 大于maskpri的日志等级将被过滤掉
+int setlogmask(int maskpri);
+
+/// @brief 关闭系统日志，使用closelog是可选的，它会关闭syslog内部的套接字描述符
+/// closelog如果再调用syslog，会再次打开本地UNIX套接字
+void closelog();
+```
+
+`syslog`的使用示例：[test_syslog.c](./socket-api/test_syslog.c)
+
+### .9.2. 程序的用户身份
+
+Linux程序的用户信息对Linux的安全是很重要的，比如很多Linux程序是给系统管理员管理系统来使用的，如果以普通用户的身份去使用，就会因为权限问题而报错。有的程序是别的用户创建或生成的，那么其他用户可能就没有权限去运行。
+
+但有些程序虽然是`root`账户创建的，但是却需要允许普通用户执行，而且这些程序在运行过程中需要访问一些`root`权限的文件。
+
+比如`passwd`程序，这个程序的所有者是`root`，它的核心功能实际是修改`/etc/passwd`文件。但它的功能是提供给一般用户修改自己密码的功能，所以它一方面需要允许普通用户执行，但同时又能访问到普通用户没有权限直接访问的文件。
+
+下面做个简单的实验，程序如下：L
+
+```cpp
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+#include "utils.h"
+
+int main(int argc, char *argv[]) {
+    uid_t uid = getuid();
+    uid_t euid = geteuid();
+
+    printf("userid is %d, effective userid is: %d\n", uid, euid);
+
+    int ret = open("/etc/passwd", O_RDWR);
+    if (0 != ret) {
+        exit_with_errno(-1);
+    }
+    return 0;
+}
+```
+如果以普通用户身份，编译运行这个程序，则会打印如下的信息：
+```txt
+userid is 1000, effective userid is: 1000
+Permission denied
+```
+可以看到，由于是程序的有效用户id是1000，所以它没有权限以`读写`权限来打开`/etc/passwd`文件。
+
+下面我们改变该测试程序的有效用户为`root`
+```bash
+sudo chown root:root test_user_id #修改目标文件所有者为root
+sudo chmod +s test_user_id # 设置目标文件的set-user-id标志
+```
+再次运行程序，我们可以看到下面的结果：
+```txt
+userid is 1000, effective userid is: 0
+Success
+```
+这里面如果我们不执行`chomd +s`，那么这个可执行程序拥有者虽然变成了`root`，但当我们以普通用户执行时，它的`useid`和`euid`依然是普通用户的id。所以依然没有权限打开`/etc/passwd`文件。
+
+Linux提供了一组获取与设置用户ID、用户有效ID、用户组ID、用户有效组ID的函数。
+
+```cpp
+uid_t getuid();             // 获取真实用户ID
+uid_t geteuid();            // 获取有效用户ID
+gid_t getgid();             // 获取真实用户组ID
+gid_t getegid();            // 获取有效用户组ID
+int setuid(uid_t uid);      // 设置真实用户ID
+int seteuid(uid_t euid);    // 设置有效用户ID
+int setgid(gid_t gid);      // 设置真实用户组ID
+int setegid(gid_t egid);    // 设置有效用户组ID
+```
+
+### .9.3. 进程间的关系
+
+**进程组**
+
+Linux下面每个进程都隶属于一个进程组，因此它除了`PID`信息外，还有进程组ID(`PGID`)。我们可以用如下函数来获取或设定指定进程的`PGID`:
+
+```cpp
+#include <unistd.h>
+/// @brief 获取指定进程的进程组ID
+/// @param[in] pid 用于指定进程
+/// @return 返回指定进程的进程组的组ID，如果调用失败，则返回-1，并设置errno
+pid_t getpgid(pid_t pid);
+
+
+/// @brief 将进程pid的进程组ID设置为pgid
+/// 如果pid与pgid相同，则pid进程将成为首领进程
+/// 如果pid为0，则代表设置的是本进程
+/// 如果pgid为0，则使用pid作为目标PGID
+/// 一个进程只能设置自己或其子进程的PGID，但当子进程双创建子进程后，就不能被其父进程设置PGID了
+/// @param[in] pid 被设置的进程的进程ID
+/// @param[in] pgid　指定的进程组ID
+/// @return 调用成功，则返回0，失败则返回-1并设置errno
+int setpgid(pid_t pid, pid_t pgid);
+```
+
+每个进程组都有一个首领进程，其`PGID`和`PID`相同。进程组将一直存在，直到其中所有的进程都退出，或者加入其他进程组。
+
+**会话**
+
+一些有关联的进程组将形成一个会话(session)。下面的函数用于创建一个会话：
+```cpp
+#include <unistd.h>
+/// @brief 创建一个新的会话
+/// 该函数只能被非首领进程调用
+/// 对于非首领进程，调用该函数的具体效果如下：
+/// 会新建一个进程组，新的进程组的组ID就是调用进程的pid
+/// 调用进程成为该会话的首领，同时也是进程组的首领
+/// 调用进程将甩开终端（如果有的话）
+/// @return 调用成功，则返回新的进程组的PGID，失败则返回-1并设置errno
+pid_t setsid(void);
+
+/// @brief 获取会话首领所在的进程组的PGID
+pid_t getsid(pid_t pid);
+```
+
+Linux进程并未提供所谓会话ID（SID）的概念。
+
+**用ps命令查看进程关系**
+
+```bash
+ps -o pid,ppid,pgid,sid,comm | less
+```
+
+打印内容如下：
+```txt
+  PID  PPID  PGID   SID COMMAND
+ 5502  5343  5502  5502 bash
+12480  5502 12480  5502 ps
+12481  5502 12480  5502 less
+```
+
+用下面的图来描绘`bash`、`ps`、`less`三个进程之间的关系。
+
+![Process Group](./assets/process_group.png)
+
+`todo`：进程组和会话的意义是什么，为什么Linux在进程基础上加了这些概念？
+
+### .9.4. 系统资源限制
+
+Linux上运行的程序都会受到资源限制的影响，比如物理设备限制（CPU数量、内存数量等）、系统策略的限制（被调度的CPU时间等），以及具体实现的限制（比如文件名的最大长度）。Linux系统资源限制可以通过如下一对函数来读取和设置。
+
+```cpp
+#include <sys/resource.h>
+/// @brief 获取进程的资源限制情况
+/// @param[in] resource 被指定资源类型
+/// @param[out] rlim 具体的限制情况（软限制和硬限制）
+/// @return 调用成功则返回0，否则返回-1并设置errno
+int getrlimit(int resource, struct rlimit *rlim);
+
+/// @brief 设定进程的的资源限制
+/// @param[in] resource 被指定资源类型
+/// @param[in] rlim 具体的限制情况（软限制和硬限制）
+/// @return 调用成功则返回0，否则返回-1并设置errno
+int setrlimit(int resource, const struct rlimit *rlim);
+
+/// @brief 描述资源限制的结构
+struct rlimit {
+    rlim_t rlim_cur; // 指定资源的软限制
+    rlim_t rlim_max; // 指定资源的硬限制
+}
+```
+
+`rlim_t`是一个整数类型。它描述资源限制级别。软限制是一个建议性的、最好不要超越的限制，如果超越的话，系统可能向进程发送信号以终止其运行。
+硬限制一般是软限制的上限，普通程序可以减小硬限制，而只有以root身份运行的程序才能增加硬限制。
+
+除了调用接口的方法来改变当前进程的资源限制外，我们还可以在终端上调用`ulimit`命令来修改当前`shell`环境下的资源限制（软限制/硬限制），这种修改将对该shell启动的所有后续程序有效。
+
+我们还可以通过修改配置文件来改变系统的软硬限制，而且这种修改是永久有效的。
+
+resource参数可以指定的资源类型列表如下：
+
+资源限制类型 | 含义
+---|---
+RLIMIT_AS | 进程产生虚拟内在总量限制（单位是字节），超过该限制将使得某些函数（比如mmap）产生ENOMEM错误。
+RLIMIT_CORE | 进程核心转储文件（core dump）的大小限制（单位是字节）。其值为0代表不产生核心转储文件。
+RLIMIT_CPU | 进程CPU时间限制（单位是秒）
+RLIMIT_DATA | 进程数据段（初始化数据data段、未初始化的bss段和堆栈）限制（单位是字节）
+RLIMIT_FSIZE | 文件大小限制（单位是字节），超过该限制将使得某些函数（比如write）产生EFBIG错误
+RLIMIT_NOFILE | 文件描述符限制，超过该限制将使得某些函数（比如pipe）产生EMFILE错误
+RLIMIT_NPROC | 用户能创建的进程数限制，超过该限制将使得某些函数（比如fork）产生EAGAIN错误。
+RLIMIT_SIGPENDING | 用户能够挂起的信号数量限制
+RLIMIT_STACK| 进程栈内存的限制（单位是字节），超过该限制将引起SIGSEGV信号
+
+### .9.5. 改变工作目录与根目录
+
+```cpp
+#include <unistd.h>
+/// @brief 获取进程当前工作目录
+/// @param[out] buf 指向的内存用于存储进程当前工作目录的绝对路径名，结束会再附上一个结束符'\0'
+/// 如果buf设置为空，而size非0，则getcwd可能在内部使用malloc动态分配内存，将这段内存返回，这里就需要手动在外部释放这部分的空间
+/// @param[in] size　buf的大小
+/// @return 如果当前目录的绝对路径（包括结束符）长度超过了size
+/// 将返回NULL，并设置errno
+char *getcwd(char *buf, size_t size);
+/// @brief　改变进程的当前工作目录
+/// @param[in] path 指向要切换到的工作目录
+/// @return 成功则返回0，失败时返回-1并设置errno
+int chdir(const char* path);
+
+/// @brief 改变进程的根目录
+/// 比如HTTP服务器，它的根目录真实路径一般为`/var/www/`
+/// 只有特权进程才可以调用该函数
+/// @param[in] path指向改变到的根目录
+/// @return 成功则返回0，失败时返回-1并设置errno
+/// @note 调用chroot后，会导致原来的一些位置变成不可访问
+/// 如果/var/log日志目录，因为根目录的真实位置已经变了
+/// 这时访问/var/log实际相当于path/var/log
+int chroot(const char* path);
+```
+
+### .9.6. 服务器程序后台化
