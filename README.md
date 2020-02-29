@@ -168,12 +168,11 @@ int accept(int sockfd, struct sockaddr* client_addr, socklen_t addrlen);
 ``
 为什么`accept`要返回一个新的socket文件描述符呢？我们把`accept`参数中的文件描述符称为监听描述符，它是专门负责来监听新的连接请求的，而且返回的这个描述符才是已连接描述符，专用来处理这个客户请求。这样服务器就可以同时处理多个客户的请求了。
 
-### .3.5. `connect`: 客户端建立连接
+### `connect`: 客户端建立连接
 
 ```c
-# include <sys/types.h>
-# include <sys/socket.h>
-
+#include <sys/types.h>
+#include <sys/socket.h>
 /// @brief 客户端主动与服务器建立连接
 /// @param[in] sockfd 客户端侧需要建立连接的socket文件描述符
 /// @param[in] serv_addr　要连接的服务端的socket地址
@@ -184,7 +183,7 @@ int accept(int sockfd, struct sockaddr* client_addr, socklen_t addrlen);
 int connect(int sockfd, const struct sockaddr* serv_addr, socklen_t addrlen);
 ```
 
-### .3.6. `close`: 关闭socket
+### `close`: 关闭socket
 
 ```c
 # include <unistd.h>
@@ -194,7 +193,7 @@ int connect(int sockfd, const struct sockaddr* serv_addr, socklen_t addrlen);
 int close(int fd);
 ```
 
-### .3.7. `shutdown`: 更加灵活的关闭socket
+###　`shutdown`: 更加灵活的关闭socket
 
 如果无论如何都要关闭连接（而不是将socket的引用计算减1），可以使用如下的`shutdown`系统调用，它是专门为网络编程设计的。
 
@@ -210,7 +209,7 @@ int close(int fd);
 int shutdown(int sockfd, int howto);
 ```
 
-### .3.8. `recv`/`send`: TCP数据读写
+### `recv`/`send`: TCP数据读写
 
 
 ```c
@@ -277,7 +276,7 @@ recv和send操作的数据交换实际是**用户空间中的buf里的数据**�
 
 > Tips: flags参数只对send和recv的当前调用生效，要永久性的修改socket的某些属性，需要使用`setsockopt`。
 
-### .3.9. `recvfrom`/`sendto`: UDP的数据读写
+### `recvfrom`/`sendto`: UDP的数据读写
 
 ```c
 # include <sys/types.h>
@@ -294,7 +293,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 
 另外对于TCP连接，也可以调用`recvfrom/sendto`，只要把最后两个参数设置为`NULL`以忽略发送端/接收端的socket地址。
 
-### .3.10. `recvmsg`/`sendmsg`: 通用数据读写函数
+### `recvmsg`/`sendmsg`: 通用数据读写函数
 
 socket编程接口还提供了一对通用的数据读写系统调用。它们不仅能用于TCP数据流，还能用于UDP数据报。最大的亮点，在于它们支持分散的内存块，可以分散读或者集中写。
 
@@ -318,11 +317,11 @@ ssize_t sendmsg(int sockfd, struct msghdr* msg, int flags);
 ```
 其中的`msg_control`和`msg_controllen`成员用于辅助数据的传送，==这里先不讨论，留个坑==。
 
-## .4. 带外标记 `todo`
+## 带外标记 `todo`
 
 我们可以通过设置`recv`的flags参数中的`MSG_OOB`标志来接收带外数据。实际应用中，我们通常无法预期带外数据何时来，所以不知道什么时候需要设置这个标志。Linux内核检测到TCP紧急标志时，将在I/O复用产生异常事件和SIGURG信号。
 
-## .5. 地址信息函数
+## 地址信息函数
 
 通过下面的2个函数，我们可以通过一个`连接Socket`来获取通信双方各自的socket地址。
 
@@ -336,9 +335,9 @@ int getpeername(int sockfd, struct sockaddr *address, socklen_t* address_len);
 
 如果实际socket地址的长度大于address所批内存的大小，那么该socket地址将被截断。
 
-## .6. socket选项`todo`
+## socket选项`todo`
 
-## .7. 网络信息API
+## 网络信息API
 
 ```c
 # include <netdb.h>
@@ -402,14 +401,14 @@ int getnameinfo(const struct sockaddr *sockaddr, socklen_t addrlen, char *host, 
 其中`ai_flags`可以设置多种标志组合，来控制上面两个函数的行为。
 
 
-## .8. 高级IO函数
+## 高级IO函数
 
 Linux提供了很多高级的I/O函数，它们并不像Linux基础I/O函数(比如open/read)那么常用，但在特定的条件下却表现出优秀的性能。大概可以分为下面三类：
 - 用于创建文件描述符的函数，包括`pipe`和`dup/dup2`函数。
 - 用于读写数据的函数，包括`readv/writev`、`sendfile`、`mmap/munmap`、`splice`和`tee`函数。
 - 用于控制I/O行为和属性的函数，包括`fcntl`函数。
 
-### .8.1. `pipe`: 用于创建一个进程间通信的管道
+### `pipe`: 用于创建一个进程间通信的管道
 
 ```c
 /// @brief 创建一个单向通信的管道，fd[0]和fd[1]构成了管道的两端
@@ -440,7 +439,7 @@ int socketpair(int domian, int type, int protocol, int fd[2]);
 
 `pipe`的示例程序：[test_pipe.c](./socket-api/test_pipe.c)
 
-### .8.2. Linux内核是如何打开文件的
+### Linux内核是如何打开文件的
 
 内核用三个相关的数据结构来表示打开的文件：
 - 描述符表（descriptor table）:每个进程都有它独立的描述符表，每个打开的文件用它的文件描述符在表中的索引，每个表项的内容是一个指向文件表的指针。
@@ -460,7 +459,7 @@ int socketpair(int domian, int type, int protocol, int fd[2]);
 ![](./assets/file_descriptor_03.png)
 
 
-### .8.3. `dup`/`dup2`: 复制文件到新的描述符
+### `dup`/`dup2`: 复制文件到新的描述符
 
 ```c
 # include <unistd.h>
@@ -483,7 +482,7 @@ int dup2(int oldfd, int newfd);
 
 `dup`示例程序：[test_dup.c](./socket-api/test_dup.c)
 
-### .8.4. `readv`/`writev`: 读写分散的数据块
+### `readv`/`writev`: 读写分散的数据块
 
 ```cpp
 # include <sys/uio.h>
@@ -502,7 +501,7 @@ ssize_t readv(int fd, const struct iovec* vector, int count);
 ssize_t writev(int fd, const struct iovec* vector, int count);
 ```
 
-### .8.5. `sendfile`: 零拷贝发送传输文件
+### `sendfile`: 零拷贝发送传输文件
 
 ```cpp
 # include <sys/sendfile.h>
@@ -518,11 +517,11 @@ ssize_t sendfile(int out_fd, int in_fd, off_t* offset, ssize_t count);
 
 >Tips: `in_fd`必须是一个支持类似`mmap`函数的文件描述符，即它必须指向真实的文件，而不能是`socket`和管道；而`out_fd`则必须是一个`socket`。由此可见`sendfile`几乎是专门为网络上传输文件而设计的。
 
-### .8.6. `mmap`/`munmap` `todo`
+### `mmap`/`munmap` `todo`
 
 在CSAPP的内存管理的部分详细介绍
 
-### .8.7. `splice`: 在两个文件之间移动数据
+### `splice`: 在两个文件之间移动数据
 
 
 ![](./assets/mv_data_with_splice.png)
@@ -547,7 +546,7 @@ ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t le
 
 使用`splice`进行文件拷贝的示例程序：[copyfile_splice.c](./socket-api/copyfile_splice.c)
 
-### .8.8. `tee`: 管道文件描述符之间复制数据
+### `tee`: 管道文件描述符之间复制数据
 
 ```cpp
 # include <fcntl.h>
@@ -564,11 +563,11 @@ ssize_t tee(int pipefd_in, int pipefd_out, size_t len, unsigned int flags);
 
 示例代码：[stdin2_stdout_and_file.c](./socket-api/stdin2_stdout_and_file.c)
 
-### .8.9. `fcntl`: 控制文件描述符的属性与行为
+### `fcntl`: 控制文件描述符的属性与行为
 
 `todo`
 
-## .9. Linux服务器程序规范
+## Linux服务器程序规范
 
 - Linux服务器程序一般以后台进程形式运行。后台进程以称守护进程（daemon）。它没有控制终端，因为不会意外收到用户的输入。守护进程的父进程通常是init进程（PID为1的进程）。
 - Linux服务器程序通常有一套日志系统，它至少能输出日志到文件，有的高级服务器还能输出日志到专门的UDP服务器。大部分的后台进程都在`/var/log`目录下有拥有自己的日志目录。
@@ -578,7 +577,7 @@ ssize_t tee(int pipefd_in, int pipefd_out, size_t len, unsigned int flags);
 - Linux服务器程序通常要考虑系统资源和限制，以预测自身能承受多大的负荷，比如进程可用文件描述符的总数与内存总量。
 
 
-### .9.1. Linux系统日志
+### Linux系统日志
 
 现在的Linux系统上使用了`rsyslogd`守护进程来处理系统日志，它既能接收用户进程输出的日志，又能接收内核日志。用户可以通过`syslog`函数生成系统日志，该函数将日志输出到一个UNIX本地域socket类型(`AF_UNIX`)的文件`/dev/log`中，`rsyslogd`则监听该文件以获取用户进程的输出。内核日志由`printk`等函数打印至内核的环状缓冲(`ring buffer`)中。环状缓存的内容直接映射到`/proc/kmsg`文件中。`rsyslogd`则通过读取该文件获取内核日志。
 
@@ -636,7 +635,7 @@ void closelog();
 
 `syslog`的使用示例：[test_syslog.c](./socket-api/test_syslog.c)
 
-### .9.2. 程序的用户身份
+### 程序的用户身份
 
 Linux程序的用户信息对Linux的安全是很重要的，比如很多Linux程序是给系统管理员管理系统来使用的，如果以普通用户的身份去使用，就会因为权限问题而报错。有的程序是别的用户创建或生成的，那么其他用户可能就没有权限去运行。
 
@@ -699,7 +698,7 @@ int setgid(gid_t gid);      // 设置真实用户组ID
 int setegid(gid_t egid);    // 设置有效用户组ID
 ```
 
-### .9.3. 进程间的关系
+### 进程间的关系
 
 **进程组**
 
@@ -766,7 +765,7 @@ ps -o pid,ppid,pgid,sid,comm | less
 
 `todo`：进程组和会话的意义是什么，为什么Linux在进程基础上加了这些概念？
 
-### .9.4. 系统资源限制
+### 系统资源限制
 
 Linux上运行的程序都会受到资源限制的影响，比如物理设备限制（CPU数量、内存数量等）、系统策略的限制（被调度的CPU时间等），以及具体实现的限制（比如文件名的最大长度）。Linux系统资源限制可以通过如下一对函数来读取和设置。
 
@@ -812,7 +811,7 @@ RLIMIT_NPROC | 用户能创建的进程数限制，超过该限制将使得某�
 RLIMIT_SIGPENDING | 用户能够挂起的信号数量限制
 RLIMIT_STACK| 进程栈内存的限制（单位是字节），超过该限制将引起SIGSEGV信号
 
-### .9.5. 改变工作目录与根目录
+### 改变工作目录与根目录
 
 ```cpp
 # include <unistd.h>
@@ -839,7 +838,7 @@ int chdir(const char* path);
 int chroot(const char* path);
 ```
 
-### .9.6. 服务器程序后台化
+### 服务器程序后台化
 
 守护进程最重要的特性是后台运行。守护进程必须与其运行前的环境隔离开来。这些环境包括**未关闭的文件描述符**、**控制终端**、**会话**和**进程组**、**工作目录**以及**文件创建掩码**等。
 
@@ -864,8 +863,8 @@ Linux提供了`daemon`函数来完成进程的后台化运行。
 int daemon(int nochdir, int noclose);
 ```
 
-## .10. IO多路复用
+## IO多路复用
 
-## .11. 网络信号处理
+## 网络信号处理
 
-## .12. 定时器
+## 定时器
