@@ -223,6 +223,7 @@ int shutdown(int sockfd, int howto);
 /// @param[in] flags 控制读取数据的行为
 /// @return 实际读取的数据量的大小，可能小于len，返回0，则代表对方已经关闭的连接了
 /// recv出错时返回-1，并设置errno
+/// @note recv函数一般需要处理返回值，来判断连接的状态，而且一般recv需要多次调用，可能才能把对方的数据读完
 ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 
 /// @brief 向socket连接中写入数据
@@ -231,7 +232,9 @@ ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 /// @param[in] len 要写入的数据量的大小
 /// @param[in] flags 控制写入数据的行为
 /// @return　调用成功时，返回实际写入数据量的大小，失败时返回-1，并设置errno
-/// @note 对于阻塞式套接字，send返回的写入数据量是和请求写入的大小len是一样的，因为它一定会等所有数据都拷贝到缓存区后才会返回。
+/// @note 对于阻塞式套接字，send返回的写入数据量是和请求写入的大小len是一样的，
+/// 因为它一定会等所有数据都拷贝到缓存区后才会返回。
+/// send成功返回时，并不代表着数据已经都被接收端正确接收了
 ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 ```
 
@@ -291,7 +294,15 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 
 `recvfrom/sendto`系统调用中的flags字段的意义和`recv/send`完全相同。
 
-另外对于TCP连接，也可以调用`recvfrom/sendto`，只要把最后两个参数设置为`NULL`以忽略发送端/接收端的socket地址。
+思考题：`sendto`是否会阻塞？
+
+我们知道udp不是面向连接所，内核不会为udp socket创建缓存区，那么`sendto`还会阻塞吗？　答案是：如果没有设置socket为`non-blocking`模式，那么`sendto`也会阻塞，原因为底层的IP数据报是有发送缓存队列的，这个队列满的时候，`sendto`就会阻塞。
+
+另外对于TCP连接，也可以调用`recvfrom/sendto`，只要把最后两个参数设置为`NULL`以忽略发送端/接收端的socket地址。**对于`recvfrom`如果它的`src_addr`参数不为空，那么`addrlen`指向的值一定要初始化为传入的地址的大小，否则拿到的地址就是不对的**
+
+UDP的echo程序: [./socket-api/echo_udp.c](./socket-api/echo_udp.c)
+
+对于UPD的服务器与客户端程序来说，他们的接收与发送消息都是无状态的，不需要建立连接，所以服务器和客户端谁都可以先启动，而且都可以重启动，都不会影响两边程序运行的正确性。因为当一边不存在时，`sendto`会返回-1，对方启动后，又可以正常调用了，`recvfrom`会阻塞，直到对方启动。
 
 ### `recvmsg`/`sendmsg`: 通用数据读写函数
 
