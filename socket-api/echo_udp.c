@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "utils.h"
+
 void do_client(int sock_fd, const struct sockaddr_in *addr) {
   // connect可以在udp socket上调用，这样就可以使用send代替sendto
   int ret = connect(sock_fd, (struct sockaddr *)addr, sizeof(*addr));
@@ -34,7 +36,11 @@ void do_client(int sock_fd, const struct sockaddr_in *addr) {
     if (strcmp("quit", buf) == 0) {
       break;
     }
-    send(sock_fd, buf, n, 0);
+    int nsent = send(sock_fd, buf, n, 0);
+    if (nsent < 0) {
+      exit_with_errno(nsent);
+    }
+    printf("%d bytes data sent to server\n", nsent);
     // 从服务端接收数据
     const uint32_t recv_buf_size = 1024;
     char recv_buf[recv_buf_size];
@@ -43,8 +49,7 @@ void do_client(int sock_fd, const struct sockaddr_in *addr) {
     socklen_t server_addrlen;
     ssize_t n_recv = recv(sock_fd, recv_buf, recv_buf_size, 0);
     if (n_recv < 0) {
-      printf("failed to send data to server!");
-      continue;
+      exit_with_errno(n_recv);
     }
     printf("Recv: [%ld] %s\n", n_recv, recv_buf);
   }
@@ -83,7 +88,7 @@ void do_server(int sock_fd, const struct sockaddr_in *addr) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 3) {
+  if (argc < 4) {
     printf("Usage: %s <role>(server/client) <ip/hostname> <port>\n", basename(argv[0]));
     return -1;
   }

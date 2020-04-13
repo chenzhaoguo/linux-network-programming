@@ -10,7 +10,25 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "utils.h"
+
+// 客户端与服务器之间通信的数据格式
+typedef struct {
+  uint32_t type; // 消息类型
+  char data[1024]; // 消息内容
+} messageObject;
+
+typedef enum {
+  MSG_PING = 0,
+  MSG_PONG = 1,
+  MSG_TYPE1 = 2,
+  MSG_TYPE3 = 3
+} messageType;
+
 void do_client(int sock_fd, const struct sockaddr_in *addr) {
+  const int KEEP_ALIVE_TIME = 10;
+  const int KEEP_ALIVE_INTERVA = 3;
+  const int KEEP_ALIVE_PROBETIMES = 3;
   int ret = connect(sock_fd, (struct sockaddr *)addr, sizeof(*addr));
   if (ret != 0) {
     printf("[%d]: %s\n", errno, strerror(errno));
@@ -21,41 +39,54 @@ void do_client(int sock_fd, const struct sockaddr_in *addr) {
   size_t buf_size = 1024;
   char *buf = malloc(buf_size);
 
+  struct timeval tv;
+  tv.tv_sec = KEEP_ALIVE_TIME;
+  tv.tv_usec = 0;
+  int heartbeats = 0;
+
+  fd_set readmask;
+  fd_set allreads;
+  FD_ZERO(&allreads);
+  FD_SET(sock_fd, &allreads);
+
+  messageObject msg_obj;
+
   while (1) {
-    // 从标准输入中读取一行
-    // getline会在换行符'\n'(10)后面，再补一个'\0'(0)
-    // 所以不用担心buf里有脏数据导致strlen计算错误的问题
-    // 返回的n是算上换行符
-    // 如果一行文本的内容大于buf_size，那么getline会realloc
-    // 同时更新buf和buf_size的值
-    ssize_t n = getline(&buf, &buf_size, stdin);
-    buf[n - 1] = '\0';  // 去掉行尾的换行符
-
-    // 设置client的退出机制
-    if (strcmp("quit", buf) == 0) {
-      break;
+    readmask = allreads;
+    int rc = select(sock_fd + 1, &readmask, NULL, NULL, &tv);
+    // 出错
+    if (rc < 0) {
+      exit_with_errno(rc);
     }
-    send(sock_fd, buf, n, 0);
-
-    // 以下代码为了测试，一次性服务器写入大量数据，测试send函数的阻塞问题
-    // int32_t large_size = 10240000;
-    // char *large_buf = malloc(large_size);
-    // for (int i = 0; i < large_size; i++) {
-    //   large_buf[i] = i % 256;
-    // }
-    // send(sock_fd, large_buf, large_size, 0);
-    // printf("sent large size data to server!\n");
-
-    // 从服务端接收数据
-    const uint32_t recv_buf_size = 1024;
-    char recv_buf[recv_buf_size];
-    memset(recv_buf, '\0', recv_buf_size);
-    ssize_t n_recv = recv(sock_fd, recv_buf, recv_buf_size, 0);
-    if (n_recv == 0) {
-      printf("lose connection from server!\n");
-      break;
+    // 超时
+    if (rc == 0) {
+      if (++heartbeats > KEEP_ALIVE_PROBETIMES) {
+        printf("connection dead!\n");
+        exit_with_errno(0);
+      }
+      printf("sending heartbeat #%d\n", heartbeats);
+      msg_obj.type = htonl(MSG_PING);
+      rc = send(sock_fd, &msg_obj, sizeof(msg_obj), 0);
+      if (rc < 0) {
+        exit_with_errno(rc);
+      }
+      tv.tv_sec = KEEP_ALIVE_INTERVA;
+      continue;
     }
-    printf("Recv: [%ld] %s\n", n_recv, recv_buf);
+    // 正常数据
+    if (FD_ISSET(sock_fd, &readmask)) {
+      int n = read(sock_fd, buf, buf_size);
+      if (n < 0) {
+        exit_with_errno(n);
+      }
+      if (n == 0) {
+        printf("server closed!\n");
+        exit_with_errno(0);
+      }
+      printf("received heartbeat, make heartbeats to 0\n");
+      heartbeats = 0;
+      tv.tv_sec = KEEP_ALIVE_TIME;
+    }
   }
   free(buf);
 }

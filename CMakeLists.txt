@@ -9,3 +9,4 @@ ENDIF()
 SET(SYSTEM_LIBS pthread m dl rt)
 
 ADD_SUBDIRECTORY(socket-api)
+ADD_SUBDIRECTORY(tests)

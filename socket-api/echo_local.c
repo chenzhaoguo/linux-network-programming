@@ -7,10 +7,11 @@
 #include <stdlib.h>  // atoi
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-void do_client(int sock_fd, const struct sockaddr_in *addr) {
+void do_client(int sock_fd, const struct sockaddr_un *addr) {
   int ret = connect(sock_fd, (struct sockaddr *)addr, sizeof(*addr));
   if (ret != 0) {
     printf("[%d]: %s\n", errno, strerror(errno));
@@ -73,15 +74,12 @@ void handle_client_connection(int conn) {
   }
 }
 
-void do_server(int sock_fd, const struct sockaddr_in *addr) {
-  int on = 1;
-  setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+void do_server(int sock_fd, const struct sockaddr_un *addr) {
   int ret = bind(sock_fd, (struct sockaddr *)(addr), sizeof(*addr));
   if (ret != 0) {
     printf("[%d] %s\n", errno, strerror(errno));
     return;
   }
-
   // 监听socket
   ret = listen(sock_fd, 5);
   if (ret != 0) {
@@ -90,7 +88,7 @@ void do_server(int sock_fd, const struct sockaddr_in *addr) {
   }
   while (1) {
     struct sockaddr_in client_addr;
-    socklen_t addr_len;
+    socklen_t addr_len = sizeof(client_addr);
     int conn = accept(sock_fd, (struct sockaddr *)(&client_addr), &addr_len);
     if (conn == -1) {
       printf("[%d] %s\n", errno, strerror(errno));
@@ -109,21 +107,17 @@ void do_server(int sock_fd, const struct sockaddr_in *addr) {
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
-    printf("Usage: %s <role>(server/client) <ip/hostname> <port>\n", basename(argv[0]));
+    printf("Usage: %s <role>(server/client) <local socket path>\n", basename(argv[0]));
     return -1;
   }
-
   // 根据程序参数来生成socket的地址
-  struct sockaddr_in addr;
+  struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(atoi(argv[3]));  // 端口号也需要转换为网络字节序
-  // 根据hostname（点分十进制/域名）获取ip地址（网络字节序）
-  struct hostent *he = gethostbyname(argv[2]);
-  memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+  addr.sun_family = AF_UNIX;
+  strcpy(addr.sun_path, argv[2]);
 
   // 创建socket
-  int sock_fd = socket(PF_INET, SOCK_STREAM, 0);
+  int sock_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 
   if (strcmp(argv[1], "server") == 0) {
     do_server(sock_fd, &addr);

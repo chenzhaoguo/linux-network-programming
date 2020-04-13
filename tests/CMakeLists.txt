@@ -1,0 +1,5 @@
+FILE(GLOB srcs *.c *.cpp)
+FOREACH(src ${srcs})
+GET_FILENAME_COMPONENT(prog_name ${src} NAME_WE)
+ADD_EXECUTABLE(${prog_name} ${src})
+ENDFOREACH()
