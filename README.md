@@ -326,6 +326,7 @@ struct msghdr {
 ssize_t recvmsg(int sockfd, struct msghdr* msg, int flags);
 ssize_t sendmsg(int sockfd, struct msghdr* msg, int flags);
 ```
+
 其中的`msg_control`和`msg_controllen`成员用于辅助数据的传送，==这里先不讨论，留个坑==。
 
 ## 带外标记 `todo`
@@ -385,8 +386,6 @@ struct servent {
 
 示例程序：　[host_service_info.c](./socket-api/host_service_info.c)
 
-
-
 需要指出的是，上面讨论的4个函数都是不可重物，即在线程安全的。不过netdb.h头文件给出了它们的可重入的版本。这些可重入的版本是在原函数的尾部加上`_r`(re-entrant)。
 
 另外还有两个函数是将上面的4个函数包起来了，同时提供IP地址、端口号与它们对应的主机名与服务名之间的转换。
@@ -409,12 +408,14 @@ void freeaddrinfo(struct addrinfo *res);
 
 int getnameinfo(const struct sockaddr *sockaddr, socklen_t addrlen, char *host, socklen_t hostlen, char *rerv, socklen_t servlen, int flags);
 ```
+
 其中`ai_flags`可以设置多种标志组合，来控制上面两个函数的行为。
 
 
 ## 高级IO函数
 
 Linux提供了很多高级的I/O函数，它们并不像Linux基础I/O函数(比如open/read)那么常用，但在特定的条件下却表现出优秀的性能。大概可以分为下面三类：
+
 - 用于创建文件描述符的函数，包括`pipe`和`dup/dup2`函数。
 - 用于读写数据的函数，包括`readv/writev`、`sendfile`、`mmap/munmap`、`splice`和`tee`函数。
 - 用于控制I/O行为和属性的函数，包括`fcntl`函数。
@@ -453,6 +454,7 @@ int socketpair(int domian, int type, int protocol, int fd[2]);
 ### Linux内核是如何打开文件的
 
 内核用三个相关的数据结构来表示打开的文件：
+
 - 描述符表（descriptor table）:每个进程都有它独立的描述符表，每个打开的文件用它的文件描述符在表中的索引，每个表项的内容是一个指向文件表的指针。
 - 文件表(file table)。整个内核打开文件的集合是由一张文件表来表示的，所有进程共享这张表。它的每个表项包含了当前文件位置、引用计数，以及一个指向`v-node`表中对应表项的指针等。关闭一个描述符会减少相应的文件表项中引用计数。内核不会删除这个文件表表项，直到它的引用计数为零。
 - `v-node`表。同文件表一样，所有进程共享这张`v-node`表。每个表项包含`stat`结构中的大多数信息，比如`st_mode`和`st_size`等。

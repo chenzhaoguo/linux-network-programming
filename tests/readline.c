@@ -1,13 +1,12 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <stdint.h>
 #include "../socket-api/utils.h"
 
 // 对比一下getline函数的行为，但不像getline那样会重新分配空间
-int32_t read_line(int fd, char *buf, int32_t max_line_size)
-{
+int32_t read_line(int fd, char *buf, int32_t max_line_size) {
   int32_t n_read = 0;
-  while(n_read < max_line_size - 1) {
+  while (n_read < max_line_size - 1) {
     char c;
     int32_t n = read(fd, &c, 1);
     if (n == 0) {

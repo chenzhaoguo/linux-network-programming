@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <libgen.h>  // basename
 #include <netdb.h>   // gethostbyname
+#include <time.h>
 
 #include <stdio.h>
 #include <stdlib.h>  // atoi
@@ -22,7 +23,7 @@ typedef enum {
   MSG_PING = 0,
   MSG_PONG = 1,
   MSG_TYPE1 = 2,
-  MSG_TYPE3 = 3
+  MSG_TYPE2 = 3
 } messageType;
 
 void do_client(int sock_fd, const struct sockaddr_in *addr) {
@@ -92,15 +93,30 @@ void do_client(int sock_fd, const struct sockaddr_in *addr) {
 }
 
 void handle_client_connection(int conn) {
-  const uint32_t buf_size = 1024;
-  char recv_buf[buf_size];
+  // 长连接，一直维持ping-pong消息传递
   while (1) {
-    int n = recv(conn, recv_buf, buf_size, 0);
+    messageObject msg_obj;
+    int n = recv(conn, &msg_obj, sizeof(messageObject), 0);
     if (n == 0) {
       break;
     }
-    printf("recv: [%d] %s\n", n, recv_buf);
-    send(conn, recv_buf, n, 0);
+    int msg_type = ntohl(msg_obj.type);
+    if (msg_type == MSG_PING) {
+        sleep(7);
+        messageObject pongMessage;
+        pongMessage.type = htonl(MSG_PONG);
+        n = send(conn, &pongMessage, sizeof(messageObject), 0);
+        if (n < 0) {
+          printf("failed to send pong mesg to client!\n");
+          break;
+        }
+    } else if (msg_type == MSG_TYPE1) {
+      printf("recevied message of type1, processing...\n");
+    } else if (msg_type == MSG_TYPE2) {
+      printf("recevied message of type2, processing...\n");
+    } else {
+      printf("unrecognized msg type!\n");
+    }
   }
 }
 
@@ -112,7 +128,6 @@ void do_server(int sock_fd, const struct sockaddr_in *addr) {
     printf("[%d] %s\n", errno, strerror(errno));
     return;
   }
-
   // 监听socket
   ret = listen(sock_fd, 5);
   if (ret != 0) {
@@ -143,7 +158,6 @@ int main(int argc, char *argv[]) {
     printf("Usage: %s <role>(server/client) <ip/hostname> <port>\n", basename(argv[0]));
     return -1;
   }
-
   // 根据程序参数来生成socket的地址
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
