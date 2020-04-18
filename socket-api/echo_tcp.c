@@ -148,7 +148,7 @@ void do_server(int sock_fd, const struct sockaddr_in *addr) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 3) {
+  if (argc < 4) {
     printf("Usage: %s <role>(server/client) <ip/hostname> <port>\n", basename(argv[0]));
     return -1;
   }
