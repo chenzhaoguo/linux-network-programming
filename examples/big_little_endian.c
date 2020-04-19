@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
   /********判断机器的字节序************/
   integer_union union_number;
   union_number.integer = 0x12345678;
-  // 将sock_addr按内存中的顺序，从低地址到高地址打印出4个字节的值
+  // 将union_number按内存中的顺序，从低地址到高地址打印出4个字节的值
   printf("Low-Address %#x %#x %#x %#x High-Address\n", union_number.bytes[0], union_number.bytes[1],
          union_number.bytes[2], union_number.bytes[3]);
   // Low-Address 0x78 0x56 0x34 0x12 High-Address

@@ -18,7 +18,7 @@ linux-network-programming
 
 需要注意的大小端的问题只针对计算该如何解析内存中的整数，而对于浮点数、字节流等数据是不存的。操作系统提供了4个函数（`htonl`/`ntohl`/`htons`/`ntohs`），分别用于`uint16/unsigned short`以及`uint32/unsigned long`类型的整数在主机字节序与网络字节序之间的转换。这4个函数存在头文件`netinet/in.h`中。
 
-主机大小端判断以及主机与网络序转换的示例程序：[socket-api/big_little_endian.c](socket-api/big_little_endian.c)
+主机大小端判断以及主机与网络序转换的示例程序：[socket-api/big_little_endian.c](examples/big_little_endian.c)
 
 ## Socket API
 
@@ -59,7 +59,7 @@ Linux Socket API提供了两组函数来提供这种转换功能，其中`inet_a
 
 ![](./assets/ip_translation.png)
 
-示例程序：[socket-api/ip_translation.c](socket-api/ip_translation.c)
+示例程序：[socket-api/ip_translation.c](examples/ip_translation.c)
 
 ## Socket基础API
 
@@ -133,7 +133,7 @@ int listen(int sockfd, int backlog);
 对于`backlog`的理解：当服务器调用`listen`后，就一直等待客户端来建立连接，这里如果客户端调用了`connect`，那么服务器端就会一连接建立的过程，这个过程会先经过`SYN_RCVD`再到`ESTABLISHED`。这些半连接和完全连接状态的连接保存在两个不同的队列中。
 这时如果服务器端一直没有调用`accept`来从`ESTABLISHED`队列中取走连接来处理，那队列满后，就不能再响应连接建立了。
 
-我们可以利用[test_listen_backlog](./socket-api/test_listen_backlog.c)程序来对`backlog`的机制进行测试
+我们可以利用[test_listen_backlog](examples/test_listen_backlog.c)程序来对`backlog`的机制进行测试
 
 ```bash
 [Server] ./test_listen_backlog 10.152.26.34 23333
@@ -300,7 +300,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 
 另外对于TCP连接，也可以调用`recvfrom/sendto`，只要把最后两个参数设置为`NULL`以忽略发送端/接收端的socket地址。**对于`recvfrom`如果它的`src_addr`参数不为空，那么`addrlen`指向的值一定要初始化为传入的地址的大小，否则拿到的地址就是不对的**
 
-UDP的echo程序: [./socket-api/echo_udp.c](./socket-api/echo_udp.c)
+UDP的echo程序: [./socket-api/echo_udp.c](examples/echo_udp.c)
 
 对于UPD的服务器与客户端程序来说，他们的接收与发送消息都是无状态的，不需要建立连接，所以服务器和客户端谁都可以先启动，而且都可以重启动，都不会影响两边程序运行的正确性。因为当一边不存在时，`sendto`会返回-1，对方启动后，又可以正常调用了，`recvfrom`会阻塞，直到对方启动。
 
@@ -384,7 +384,7 @@ struct servent {
 
 ![hostent的结构示意](./assets/hostnet_struct.png)
 
-示例程序：　[host_service_info.c](./socket-api/host_service_info.c)
+示例程序：　[host_service_info.c](examples/host_service_info.c)
 
 需要指出的是，上面讨论的4个函数都是不可重物，即在线程安全的。不过netdb.h头文件给出了它们的可重入的版本。这些可重入的版本是在原函数的尾部加上`_r`(re-entrant)。
 
@@ -449,7 +449,7 @@ Linux的socket　API中提供了一个`socketpair`函数。它能够方便地创
 int socketpair(int domian, int type, int protocol, int fd[2]);
 ```
 
-`pipe`的示例程序：[test_pipe.c](./socket-api/test_pipe.c)
+`pipe`的示例程序：[test_pipe.c](examples/test_pipe.c)
 
 ### Linux内核是如何打开文件的
 
@@ -493,7 +493,7 @@ int dup2(int oldfd, int newfd);
 
 > Tips: 通过`dup`和`dup2`创建的文件描述符并不继承原文件描述符的属性，比如`close-on-exec`和`non-blocking`等。
 
-`dup`示例程序：[test_dup.c](./socket-api/test_dup.c)
+`dup`示例程序：[test_dup.c](examples/test_dup.c)
 
 ### `readv`/`writev`: 读写分散的数据块
 
@@ -557,7 +557,7 @@ ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t le
 
 使用`splice`时`fd_in`和`fd_out`必须有一个为管道文件描述符。
 
-使用`splice`进行文件拷贝的示例程序：[copyfile_splice.c](./socket-api/copyfile_splice.c)
+使用`splice`进行文件拷贝的示例程序：[copyfile_splice.c](examples/copyfile_splice.c)
 
 ### `tee`: 管道文件描述符之间复制数据
 
@@ -574,7 +574,7 @@ ssize_t tee(int pipefd_in, int pipefd_out, size_t len, unsigned int flags);
 
 ![](./assets/stdin2_stdout_and_file.png)
 
-示例代码：[stdin2_stdout_and_file.c](./socket-api/stdin2_stdout_and_file.c)
+示例代码：[stdin2_stdout_and_file.c](examples/stdin2_stdout_and_file.c)
 
 ### `fcntl`: 控制文件描述符的属性与行为
 
@@ -646,7 +646,7 @@ int setlogmask(int maskpri);
 void closelog();
 ```
 
-`syslog`的使用示例：[test_syslog.c](./socket-api/test_syslog.c)
+`syslog`的使用示例：[test_syslog.c](examples/test_syslog.c)
 
 ### 程序的用户身份
 

@@ -22,7 +22,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../socket-api/utils.h"
+#include "utils.h"
 
 void do_client(int sock_fd, const struct sockaddr_in *addr) {
   int ret = connect(sock_fd, (struct sockaddr *)addr, sizeof(*addr));

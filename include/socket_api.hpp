@@ -1,13 +1,13 @@
-#include <errno.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <cstring>
+#include "../../../../../usr/include/errno.h"
+#include "../../../../../usr/include/netdb.h"
+#include "../../../../../usr/include/x86_64-linux-gnu/sys/socket.h"
+#include "../../../../../usr/include/x86_64-linux-gnu/sys/types.h"
+#include "../../../../../usr/include/x86_64-linux-gnu/sys/un.h"
+#include "../../../../../usr/include/unistd.h"
+#include "../../../../../usr/include/c++/5/cstring"
 
-#include <cstdint>
-#include <string>
+#include "../../../../../usr/include/c++/5/cstdint"
+#include "../../../../../usr/include/c++/5/string"
 
 static int GetAddressByName(const std::string& name, int16_t port, int pf,
                             struct sockaddr* address) {
