@@ -10,8 +10,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <poll.h>
-
 void do_client(int sock_fd, const struct sockaddr_in *addr) {
   int ret = connect(sock_fd, (struct sockaddr *)addr, sizeof(*addr));
   if (ret != 0) {
@@ -83,72 +81,34 @@ void do_server(int sock_fd, const struct sockaddr_in *addr) {
     printf("[%d] %s\n", errno, strerror(errno));
     return;
   }
+
   // 监听socket
   ret = listen(sock_fd, 5);
   if (ret != 0) {
     printf("[%d] %s\n", errno, strerror(errno));
     return;
   }
-  const int32_t max_fds = 1000;
-  struct pollfd *fds = (struct pollfd*)malloc(sizeof(struct pollfd) * max_fds);
-  for (int32_t i = 0; i < max_fds; i++) {
-    fds[i].fd = -1;
-    fds[i].events = 0;
-    fds[i].revents = 0;
-  }
-  fds[0].fd = sock_fd;
-  fds[0].events = POLLIN;
-
-  const int32_t read_buf_size = 1024;
-  char read_buf[read_buf_size];
-
-  for(;;) {
-    printf("start poll POLLIN\n");
-    int32_t ready = poll(fds, max_fds, -1);
-    if (ready < 0) {
-      // pool返回负数，则代表出错，错误类型写在errno里
-      printf("ready < 0, %s\n", strerror(errno));
-      break;
+  while (1) {
+    struct sockaddr_in client_addr;
+    socklen_t addr_len;
+    int conn = accept(sock_fd, (struct sockaddr *)(&client_addr), &addr_len);
+    if (conn == -1) {
+      printf("[%d] %s\n", errno, strerror(errno));
+      return;
     }
-    printf("ready = %d\n", ready);
-
-    if (fds[0].revents & POLLIN) {
-      struct sockaddr_in client_addr;
-      int addrlen = 0;
-      printf("Accept client connection\n");
-      int conn = accept(fds[0].fd, (struct sockaddr*)&client_addr, &addrlen);
-      for (int32_t i = 1; i < max_fds; i++) {
-        if (fds[i].fd  == -1) {
-          fds[i].fd = conn;
-          fds[i].events = fds[i].events | POLLIN;
-          break;
-        }
-      }
-      if (--ready == 0) {
-        continue;
-      }
-    }
-    for (int32_t i = 1; i < max_fds; i++) {
-      if (fds[i].revents & POLLIN) {
-        --ready;
-        int nread = recv(fds[i].fd, read_buf, read_buf_size, 0);
-        if (nread == 0) {
-          printf("client connection closed\n");
-          close(fds[i].fd);
-          fds[i].fd = -1;
-          continue;
-        }
-        send(fds[i].fd, read_buf, nread, 0);
-      }
-      if (ready == 0) {
-        break;
-      }
-    }
+    char client_ip[INET_ADDRSTRLEN];
+    memset(client_ip, '\0', INET_ADDRSTRLEN);
+    printf("Connection from %s:%d\n",
+           inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN),
+           ntohs(client_addr.sin_port));
+    handle_client_connection(conn);
+    printf("Connection closed!\n");
+    close(conn);
   }
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 4) {
+  if (argc < 3) {
     printf("Usage: %s <role>(server/client) <ip/hostname> <port>\n", basename(argv[0]));
     return -1;
   }
@@ -167,7 +127,6 @@ int main(int argc, char *argv[]) {
 
   if (strcmp(argv[1], "server") == 0) {
     do_server(sock_fd, &addr);
-    printf("server exit!\n");
   } else if (strcmp(argv[1], "client") == 0) {
     do_client(sock_fd, &addr);
   } else {
