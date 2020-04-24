@@ -2,6 +2,10 @@
 linux-network-programming
 ---
 
+## Reference
+
+- [Linux man pages](http://man7.org/linux/man-pages/index.html)
+
 
 ## 主机字节序与网络字节序
 
